@@ -27,10 +27,17 @@ import matplotlib.pyplot as plt
 # You should not modify the interals of the Transformer
 # except where indicated to implement the multi-head
 # attention. 
-
+# Use the GPU if you have one
+if torch.cuda.is_available():
+    print("Using the GPU")
+    device = torch.device("cuda") 
+else:
+    print("WARNING: You are about to run on cpu, and this will likely run out \
+      of memory. \n You can try setting batch_size=1 to reduce memory usage")
+    device = torch.device("cpu")
 
 def clones(module, N):
-    "
+    """
     A helper function for producing N identical layers (each with their own parameters).
     
     inputs: 
@@ -39,7 +46,7 @@ def clones(module, N):
 
     returns:
         a ModuleList with the copies of the module (the ModuleList is itself also a module)
-    "
+    """
     return nn.ModuleList([copy.deepcopy(module) for _ in range(N)])
 
 # Problem 1
@@ -57,15 +64,24 @@ class RNN(nn.Module): # Implement a stacked vanilla RNN with Tanh nonlinearities
                   Do not apply dropout on recurrent connections.
     """
     super(RNN, self).__init__()
-
+    
     # TODO ========================
     # Initialization of the parameters of the recurrent and fc layers. 
+    self.emb_size=emb_size
+    self.hidden_size=hidden_size
+    self.seq_len=seq_len
+    self.batch_size=batch_size
+    self.vocab_size=vocab_size
+    self.num_layers=num_layers
+    self.dp_keep_prob=dp_keep_prob
+
     # Your implementation should support any number of stacked hidden layers 
     # (specified by num_layers), use an input embedding layer, and include fully
     # connected layers with dropout after each recurrent layer.
     # Note: you may use pytorch's nn.Linear, nn.Dropout, and nn.Embedding 
     # modules, but not recurrent modules.
-    #
+    self.init_weights()
+    self.drop = nn.Dropout(1-self.dp_keep_prob)
     # To create a variable number of parameter tensors and/or nn.Modules 
     # (for the stacked hidden layer), you may need to use nn.ModuleList or the 
     # provided clones function (as opposed to a regular python list), in order 
@@ -77,8 +93,26 @@ class RNN(nn.Module): # Implement a stacked vanilla RNN with Tanh nonlinearities
     # TODO ========================
     # Initialize the embedding and output weights uniformly in the range [-0.1, 0.1]
     # and output biases to 0 (in place). The embeddings should not use a bias vector.
+
+    # Embedding initialized uniform weights from -0.1 to 0.1 and zero bias
+    self.emb_W = nn.Embedding(self.vocab_size, self.emb_size) 
+    nn.init.uniform_(self.emb_W.weight, -0.1, 0.1)
+
+    # Output layer initialized uniform weights and zero bias
+    self.out_W = nn.Linear(self.hidden_size, self.vocab_size)
+    nn.init.uniform_(self.out_W.weight, -0.1, 0.1)
+    self.out_W.bias.data.fill_(0)
+
     # Initialize all other (i.e. recurrent and linear) weights AND biases uniformly 
     # in the range [-k, k] where k is the square root of 1/hidden_size
+    # this is default nn initialisation scheme
+    # Creating an array of layers of identical size
+    self.rec_W = clones(nn.Linear(self.hidden_size, self.hidden_size,bias=False), self.num_layers)
+
+    self.linear_W = clones(nn.Linear(self.hidden_size, self.hidden_size), self.num_layers-1)   
+    #insert weights for first layer
+    self.linear_W.insert(0, nn.Linear(self.emb_size, self.hidden_size))
+
 
   def init_hidden(self):
     # TODO ========================
@@ -86,7 +120,8 @@ class RNN(nn.Module): # Implement a stacked vanilla RNN with Tanh nonlinearities
     """
     This is used for the first mini-batch in an epoch, only.
     """
-    return # a parameter tensor of shape (self.num_layers, self.batch_size, self.hidden_size)
+    # a parameter tensor of shape (self.num_layers, self.batch_size, self.hidden_size)
+    return nn.Parameter(torch.zeros(self.num_layers,self.batch_size,self.hidden_size))
 
   def forward(self, inputs, hidden):
     # TODO ========================
@@ -124,6 +159,18 @@ class RNN(nn.Module): # Implement a stacked vanilla RNN with Tanh nonlinearities
               if you are curious.
                     shape: (num_layers, batch_size, hidden_size)
     """
+
+    logits = torch.empty(self.seq_len, self.batch_size, self.vocab_size).to(device)
+    embeddings = self.emb_W(inputs) #returns seq_len, batch_size, emb_size
+
+    for t in range(inputs.shape[0]):
+        x = self.drop(embeddings[t,:,:])
+        for l in range(self.num_layers):
+            x=torch.tanh(self.linear_W[l](x)+self.rec_W[l](hidden[l,:,:].clone()))
+            hidden[l,:,:]=x
+            x=self.drop(x)
+
+        logits[t,:,:]=self.out_W(x)
     return logits.view(self.seq_len, self.batch_size, self.vocab_size), hidden
 
   def generate(self, input, hidden, generated_seq_len):
@@ -151,7 +198,17 @@ class RNN(nn.Module): # Implement a stacked vanilla RNN with Tanh nonlinearities
         - Sampled sequences of tokens
                     shape: (generated_seq_len, batch_size)
     """
-   
+    samples = torch.empty(generated_seq_len, self.batch_size, self.vocab_size).to(device)
+    x = self.emb_W(inputs) #returns seq_len, batch_size, emb_size
+
+    for t in range(generated_seq_len):
+        x=self.drop(x)
+        for l in range(self.num_layers):
+            x=nn.functional.tanh(self.linear_W[l](x)+self.rec_W[l](hidden[l,:,:]))
+            hidden[l,:,:]=x
+            x=self.drop(x)
+        x=nn.functional.softmax(self.out_W(x))
+        samples[t,:,:]=x
     return samples
 
 
@@ -165,29 +222,90 @@ class GRU(nn.Module): # Implement a stacked GRU RNN
     super(GRU, self).__init__()
 
     # TODO ========================
-
+    self.emb_size=emb_size
+    self.hidden_size=hidden_size
+    self.seq_len=seq_len
+    self.batch_size=batch_size
+    self.vocab_size=vocab_size
+    self.num_layers=num_layers
+    self.dp_keep_prob
+    self.init_weights_uniform()
+    self.drop = nn.Dropout(1-self.dp_keep_prob)
+    
   def init_weights_uniform(self):
     # TODO ========================
+    self.emb_W = nn.Embedding(self.vocab_size, self.emb_size) 
+    nn.init.uniform_(self.emb_W.weight, -0.1, 0.1)
+
+    # Output layer initialized uniform weights and zero bias
+    self.out_W = nn.Linear(self.hidden_size, self.vocab_size)
+    nn.init.uniform_(self.out_W.weight, -0.1, 0.1)
+    self.out_W.bias.data.fill_(0)
+
+    # reset
+    self.Ur = clones(nn.Linear(self.hidden_size, self.hidden_size,bias=False), self.num_layers)
+    self.Wr = clones(nn.Linear(self.hidden_size, self.hidden_size), self.num_layers-1)   
+    #insert weights for first layer
+    self.Wr.insert(0, nn.Linear(self.emb_size, self.hidden_size))
+
+    #forget
+    self.Uf = clones(nn.Linear(self.hidden_size, self.hidden_size,bias=False), self.num_layers)
+    self.Wf = clones(nn.Linear(self.hidden_size, self.hidden_size), self.num_layers-1)   
+    #insert weights for first layer
+    self.Wf.insert(0, nn.Linear(self.emb_size, self.hidden_size))
+
+    #normal weights
+    self.Uh = clones(nn.Linear(self.hidden_size, self.hidden_size,bias=False), self.num_layers)
+    self.Wh = clones(nn.Linear(self.hidden_size, self.hidden_size), self.num_layers-1)   
+    #insert weights for first layer
+    self.Wh.insert(0, nn.Linear(self.emb_size, self.hidden_size))
 
   def init_hidden(self):
     # TODO ========================
-    return # a parameter tensor of shape (self.num_layers, self.batch_size, self.hidden_size)
+    return nn.Parameter(torch.zeros(self.num_layers,self.batch_size,self.hidden_size)) # a parameter tensor of shape (self.num_layers, self.batch_size, self.hidden_size)
 
   def forward(self, inputs, hidden):
     # TODO ========================
+    logits = torch.empty(self.seq_len, self.batch_size, self.vocab_size).to(device)
+    embeddings = self.emb_W(inputs) #returns seq_len, batch_size, emb_size
+
+    for t in range(inputs.shape[0]):
+        x = self.drop(embeddings[t,:,:])
+        for l in range(self.num_layers):
+            r=torch.sigmoid(self.Wr[l](x)+self.Ur[l](hidden[l,:,:].clone()))
+            z=torch.sigmoid(self.Wf[l](x)+self.Uf[l](hidden[l,:,:].clone()))
+            h=torch.tanh(self.Wh[l](x)+self.Uh[l](torch.mul(r,hidden[l,:,:].clone())))
+            x=torch.mul((1-z),hidden[l,:,:].clone())+torch.mul(z,h)
+            hidden[l,:,:]=x
+            x=self.drop(x)
+
+        logits[t,:,:]=self.out_W(x)
     return logits.view(self.seq_len, self.batch_size, self.vocab_size), hidden
 
   def generate(self, input, hidden, generated_seq_len):
     # TODO ========================
+    samples = torch.empty(generated_seq_len, self.batch_size, self.vocab_size).to(device)
+    x = self.emb_W(inputs) #returns seq_len, batch_size, emb_size
+
+    for t in range(inputs.shape[0]):
+        x = self.drop(x)
+        for l in range(self.num_layers):
+            r=torch.sigmoid(self.Wr[l](x)+self.Ur[l](hidden[l,:,:].clone()))
+            z=torch.sigmoid(self.Wf[l](x)+self.Uf[l](hidden[l,:,:].clone()))
+            h=torch.tanh(self.Wh[l](x)+self.Uh[l](torch.mul(r,hidden[l,:,:].clone())))
+            x=torch.mul((1-z),hidden[l,:,:].clone())+torch.mul(z,h)
+            hidden[l,:,:]=x
+        x=nn.functional.softmax(self.out_W(x))
+        samples[t,:,:]=x
     return samples
 
 
 # Problem 3
-##############################################################################
-#
+############################################################################
+
 # Code for the Transformer model
-#
-##############################################################################
+
+############################################################################
 
 """
 Implement the MultiHeadedAttention module of the transformer architecture.
@@ -215,33 +333,33 @@ The complete model consists of the embeddings, the stacked transformer blocks,
 and a linear layer followed by a softmax.
 """
 
-#This code has been modified from an open-source project, by David Krueger.
-#The original license is included below:
-#MIT License
-#
-#Copyright (c) 2018 Alexander Rush
-#
-#Permission is hereby granted, free of charge, to any person obtaining a copy
-#of this software and associated documentation files (the "Software"), to deal
-#in the Software without restriction, including without limitation the rights
-#to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-#copies of the Software, and to permit persons to whom the Software is
-#furnished to do so, subject to the following conditions:
-#
-#The above copyright notice and this permission notice shall be included in all
-#copies or substantial portions of the Software.
-#
-#THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-#IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-#FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-#AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-#LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-#OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-#SOFTWARE.
+# This code has been modified from an open-source project, by David Krueger.
+# The original license is included below:
+# MIT License
+
+# Copyright (c) 2018 Alexander Rush
+
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
 
 
 
-#----------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------
 
 # TODO: implement this class
 class MultiHeadedAttention(nn.Module):
@@ -283,7 +401,7 @@ class MultiHeadedAttention(nn.Module):
 
 
 
-#----------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------
 # The encodings of elements of the input sequence
 
 class WordEmbedding(nn.Module):
@@ -293,7 +411,7 @@ class WordEmbedding(nn.Module):
         self.n_units = n_units
 
     def forward(self, x):
-        #print (x)
+        # print (x)
         return self.lut(x) * math.sqrt(self.n_units)
 
 
@@ -319,7 +437,7 @@ class PositionalEncoding(nn.Module):
 
 
 
-#----------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------
 # The TransformerBlock and the full Transformer
 
 
@@ -384,7 +502,7 @@ def make_model(vocab_size, n_blocks=6,
     return model
 
 
-#----------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------
 # Data processing
 
 def subsequent_mask(size):
@@ -408,7 +526,7 @@ class Batch:
         return mask
 
 
-#----------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------
 # Some standard modules
 
 class LayerNorm(nn.Module):
