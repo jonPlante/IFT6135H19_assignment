@@ -228,7 +228,7 @@ class GRU(nn.Module): # Implement a stacked GRU RNN
     self.batch_size=batch_size
     self.vocab_size=vocab_size
     self.num_layers=num_layers
-    self.dp_keep_prob
+    self.dp_keep_prob=dp_keep_prob
     self.init_weights_uniform()
     self.drop = nn.Dropout(1-self.dp_keep_prob)
     
@@ -395,11 +395,6 @@ class MultiHeadedAttention(nn.Module):
         # Also apply dropout to the attention values.
 
         return # size: (batch_size, seq_len, self.n_units)
-
-
-
-
-
 
 # ----------------------------------------------------------------------------------
 # The encodings of elements of the input sequence
