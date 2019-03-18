@@ -388,7 +388,7 @@ class MultiHeadedAttention(nn.Module):
         self.k_linear = clones(nn.Linear(n_units, n_units), n_heads)
         self.q_linear = clones(nn.Linear(n_units, n_units), n_heads)
         self.v_linear = clones(nn.Linear(n_units, n_units), n_heads)
-        self.o_linear = nn.Linear(n_heads * n_heads, n_units)
+        self.o_linear = nn.Linear(n_units, self.d_k)
 
         self.k = np.sqrt(1/self.n_units)
 
@@ -443,9 +443,8 @@ class MultiHeadedAttention(nn.Module):
 
         # eq 12
         H = torch.stack(H)
-        shape = H.shape
         H = torch.tanh(H.view(-1, self.o_linear.weight.shape[1]))
-        output = self.o_linear(H).view(shape[1], shape[2], shape[0])
+        output = self.o_linear(H).view(key.shape)
         return output
 
 
