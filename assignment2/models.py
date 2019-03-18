@@ -383,12 +383,11 @@ class MultiHeadedAttention(nn.Module):
         # and nn.Dropout
         # ETA: you can also use softmax
         # ETA: you can use the "clones" function we provide.
-
-        self.dropout_layer = nn.Dropout(p=0.5)
+        self.dropout = nn.Dropout(p=dropout)
         self.k_linear = clones(nn.Linear(n_units, n_units), n_heads)
         self.q_linear = clones(nn.Linear(n_units, n_units), n_heads)
         self.v_linear = clones(nn.Linear(n_units, n_units), n_heads)
-        self.o_linear = nn.Linear(n_heads ,n_units)
+        self.o_linear = nn.Linear(n_heads * n_heads, n_units)
 
         self.k = np.sqrt(1/self.n_units)
 
@@ -415,25 +414,39 @@ class MultiHeadedAttention(nn.Module):
         # As described in the .tex, apply input masking to the softmax
         # generating the "attention v_linear" (i.e. A_i in the .tex)
         # Also apply dropout to the attention v_linear.
+
+        # (Q W_Q_i + b_Q_i) as seen in eq. 10 in the .tex
         queries = []
         for q in self.q_linear:
             queries.append(q(query))
 
+        # (K W_K_i + b_K_i) as seen in eq. 10 in the .tex
         keys = []
         for k in self.k_linear:
             keys.append(k(key))
 
+        # (V W_V_i + b_V_i) as seen in eq. 11 in the .tex
         values = []
         for v in self.v_linear:
             values.append(v(value))
-        import pdb; pdb.set_trace()
 
-        queries = queries * self.k # Scale the queries
+        H = []
+        for index, query in enumerate(queries):
+            # The rest of eq. 10, resulting in A_i. As specified in the comment above and .tex, we apply input masking and dropout to A_i
+            logit = torch.matmul(query, keys[index].permute(0, 2 ,1)) * self.k
+            masked_logit = logit * mask.float() - 10**9*(1-mask.float())
+            A_i = nn.functional.softmax(masked_logit, dim=-1)
+            A_i = self.dropout(A_i)
+            H_i = torch.matmul(A_i, values[index])
+            H.append(H_i)
 
-        logits = torch.matmul(queries, keys.permute(0, 1, 3, 2))
+        # eq 12
+        H = torch.stack(H)
+        shape = H.shape
+        H = torch.tanh(H.view(-1, self.o_linear.weight.shape[1]))
+        output = self.o_linear(H).view(shape[1], shape[2], shape[0])
+        return output
 
-        import pdb; pdb.set_trace()
-        return # size: (batch_size, seq_len, self.n_units)
 
 # ----------------------------------------------------------------------------------
 # The encodings of elements of the input sequence
