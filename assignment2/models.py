@@ -432,7 +432,7 @@ class MultiHeadedAttention(nn.Module):
         logit=torch.matmul(Q,K.transpose.transpose(-2,-1))/np.sqrt(self.d_k)
         a=self.masked_softmax(logit,mask)
         a=self.dropout(a)
-        output=self.linear_W[3](torch.matmul(a,V)).transpose(1,2).contiguous().view(query.size(0),-1,self.n_units))
+        output=self.linear_W[3](torch.matmul(a,V).transpose(1,2).contiguous().view(query.size(0),-1,self.n_units))
 
         return output
 
