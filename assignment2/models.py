@@ -380,6 +380,7 @@ class MultiHeadedAttention(nn.Module):
         # This requires the number of n_heads to evenly divide n_units.
         assert n_units % n_heads == 0
         self.n_units = n_units
+        self.n_heads=n_heads
         # TODO: create/initialize any necessary parameters or layers
         # Initialize all weights and biases uniformly in the range [-k, k],
         # where k is the square root of 1/n_units.
@@ -388,27 +389,24 @@ class MultiHeadedAttention(nn.Module):
         # ETA: you can also use softmax
         # ETA: you can use the "clones" function we provide.
         self.dropout = nn.Dropout(p=dropout)
-        self.k_linear = clones(nn.Linear(n_units, n_units), n_heads)
-        self.q_linear = clones(nn.Linear(n_units, n_units), n_heads)
-        self.v_linear = clones(nn.Linear(n_units, n_units), n_heads)
-        self.o_linear = nn.Linear(n_units, self.d_k)
+        self.linear_W=clones(nn.Linear(self.n_units,self.n_units),4)
 
         self.k = np.sqrt(1/self.n_units)
+        for w in self.linear_W:
+            nn.init.uniform_(w.weight,-self.k,self.k)
+            nn.init.uniform_(w.bias,-self.k,self.k)
 
-        for key in self.k_linear:
-            torch.nn.init.uniform_(key.weight, -self.k, self.k)
-            torch.nn.init.uniform_(key.bias, -self.k, self.k)
 
-        for query in self.q_linear:
-            torch.nn.init.uniform_(query.weight, -self.k, self.k)
-            torch.nn.init.uniform_(query.bias, -self.k, self.k)
+    def masked_softmax(self,logit,mask):
+        #masked version of softmax
+        if mask is not None:
+            # mask=mask.unsqueeze(1)
+            masked_logit=logit.masked_fill(mask==0,-10**9)
+        else:
+            masked_logit=logit
 
-        for value in self.v_linear:
-            torch.nn.init.uniform_(value.weight, -self.k, self.k)
-            torch.nn.init.uniform_(value.bias, -self.k, self.k)
+        return nn.functional.softmax(masked_logit, dim=-1)
 
-        torch.nn.init.uniform_(self.o_linear.weight, -self.k, self.k)
-        torch.nn.init.uniform_(self.o_linear.bias, -self.k, self.k)
 
     def forward(self, query, key, value, mask=None):
         # TODO: implement the masked multi-head attention.
@@ -420,34 +418,22 @@ class MultiHeadedAttention(nn.Module):
         # Also apply dropout to the attention v_linear.
 
         # (Q W_Q_i + b_Q_i) as seen in eq. 10 in the .tex
-        queries = []
-        for q in self.q_linear:
-            queries.append(q(query))
+        Q=self.linear_W[0](query)#.view(query.size(0),query.size(1),self.n_heads,self.d_k).transpose(1,2)
 
         # (K W_K_i + b_K_i) as seen in eq. 10 in the .tex
-        keys = []
-        for k in self.k_linear:
-            keys.append(k(key))
+        K=self.linear_W[1](key)#.view(query.size(0),query.size(1),self.n_heads,self.d_k).transpose(1,2)
+
 
         # (V W_V_i + b_V_i) as seen in eq. 11 in the .tex
-        values = []
-        for v in self.v_linear:
-            values.append(v(value))
+        V=self.linear_W[2](value)#.view(query.size(0),query.size(1),self.n_heads,self.d_k).transpose(1,2)
 
-        H = []
-        for index, query in enumerate(queries):
-            # The rest of eq. 10, resulting in A_i. As specified in the comment above and .tex, we apply input masking and dropout to A_i
-            logit = torch.matmul(query, keys[index].permute(0, 2 ,1)) * self.k
-            masked_logit = logit * mask.float() - 10**9*(1-mask.float())
-            A_i = nn.functional.softmax(masked_logit, dim=-1)
-            A_i = self.dropout(A_i)
-            H_i = torch.matmul(A_i, values[index])
-            H.append(H_i)
 
-        # eq 12
-        H = torch.stack(H)
-        H = torch.tanh(H.view(-1, self.o_linear.weight.shape[1]))
-        output = self.o_linear(H).view(key.shape)
+        # H = []
+        logit=torch.matmul(Q,K.transpose(-2,-1))/np.sqrt(self.d_k)
+        a=self.masked_softmax(logit,mask)
+        a=self.dropout(a)
+        output=self.linear_W[3](torch.matmul(a,V))
+
         return output
 
 
