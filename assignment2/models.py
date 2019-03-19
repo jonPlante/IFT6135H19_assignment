@@ -112,7 +112,7 @@ class RNN(nn.Module): # Implement a stacked vanilla RNN with Tanh nonlinearities
     self.linear_W = clones(nn.Linear(self.hidden_size, self.hidden_size), self.num_layers-1)
     #insert weights for first layer
     self.linear_W.insert(0, nn.Linear(self.emb_size, self.hidden_size))
-    self.init.uniform_(self.linear_W[0].weight,-np.sqrt(self.hidden_size),np.sqrt(self.hidden_size))
+    nn.init.uniform_(self.linear_W[0].weight,-np.sqrt(1/self.hidden_size),np.sqrt(1/self.hidden_size))
 
 
   def init_hidden(self):
@@ -248,18 +248,21 @@ class GRU(nn.Module): # Implement a stacked GRU RNN
     self.Wr = clones(nn.Linear(self.hidden_size, self.hidden_size), self.num_layers-1)
     #insert weights for first layer
     self.Wr.insert(0, nn.Linear(self.emb_size, self.hidden_size))
+    nn.init.uniform_(self.Wr[0].weight,-np.sqrt(1/self.hidden_size),np.sqrt(1/self.hidden_size))
 
     #forget
     self.Uf = clones(nn.Linear(self.hidden_size, self.hidden_size,bias=False), self.num_layers)
     self.Wf = clones(nn.Linear(self.hidden_size, self.hidden_size), self.num_layers-1)
     #insert weights for first layer
     self.Wf.insert(0, nn.Linear(self.emb_size, self.hidden_size))
+    nn.init.uniform_(self.Wf[0].weight,-np.sqrt(1/self.hidden_size),np.sqrt(1/self.hidden_size))
 
     #normal weights
     self.Uh = clones(nn.Linear(self.hidden_size, self.hidden_size,bias=False), self.num_layers)
     self.Wh = clones(nn.Linear(self.hidden_size, self.hidden_size), self.num_layers-1)
     #insert weights for first layer
     self.Wh.insert(0, nn.Linear(self.emb_size, self.hidden_size))
+    nn.init.uniform_(self.Wh[0].weight,-np.sqrt(1/self.hidden_size),np.sqrt(1/self.hidden_size))
 
   def init_hidden(self):
     # TODO ========================
