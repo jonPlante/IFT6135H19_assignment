@@ -107,11 +107,11 @@ class RNN(nn.Module): # Implement a stacked vanilla RNN with Tanh nonlinearities
     # in the range [-k, k] where k is the square root of 1/hidden_size
     # this is default nn initialisation scheme
     # Creating an array of layers of identical size
-    self.rec_W = clones(nn.Linear(self.hidden_size, self.hidden_size,bias=False), self.num_layers)
+    self.rec_W = clones(nn.Linear(self.hidden_size, self.hidden_size), self.num_layers)
 
     self.linear_W = clones(nn.Linear(self.hidden_size, self.hidden_size), self.num_layers-1)
     #insert weights for first layer
-    self.linear_W.insert(0, nn.Linear(self.emb_size, self.hidden_size))
+    self.linear_W.insert(0, nn.Linear(self.emb_size, self.hidden_size,bias=False))
     nn.init.uniform_(self.linear_W[0].weight,-np.sqrt(1/self.hidden_size),np.sqrt(1/self.hidden_size))
 
 
@@ -244,22 +244,22 @@ class GRU(nn.Module): # Implement a stacked GRU RNN
     self.out_W.bias.data.fill_(0)
 
     # reset
-    self.Ur = clones(nn.Linear(self.hidden_size, self.hidden_size,bias=False), self.num_layers)
-    self.Wr = clones(nn.Linear(self.hidden_size, self.hidden_size), self.num_layers-1)
+    self.Ur = clones(nn.Linear(self.hidden_size, self.hidden_size), self.num_layers)
+    self.Wr = clones(nn.Linear(self.hidden_size, self.hidden_size,bias=False), self.num_layers-1)
     #insert weights for first layer
     self.Wr.insert(0, nn.Linear(self.emb_size, self.hidden_size))
     nn.init.uniform_(self.Wr[0].weight,-np.sqrt(1/self.hidden_size),np.sqrt(1/self.hidden_size))
 
     #forget
-    self.Uf = clones(nn.Linear(self.hidden_size, self.hidden_size,bias=False), self.num_layers)
-    self.Wf = clones(nn.Linear(self.hidden_size, self.hidden_size), self.num_layers-1)
+    self.Uf = clones(nn.Linear(self.hidden_size, self.hidden_size), self.num_layers)
+    self.Wf = clones(nn.Linear(self.hidden_size, self.hidden_size,bias=False), self.num_layers-1)
     #insert weights for first layer
     self.Wf.insert(0, nn.Linear(self.emb_size, self.hidden_size))
     nn.init.uniform_(self.Wf[0].weight,-np.sqrt(1/self.hidden_size),np.sqrt(1/self.hidden_size))
 
     #normal weights
-    self.Uh = clones(nn.Linear(self.hidden_size, self.hidden_size,bias=False), self.num_layers)
-    self.Wh = clones(nn.Linear(self.hidden_size, self.hidden_size), self.num_layers-1)
+    self.Uh = clones(nn.Linear(self.hidden_size, self.hidden_size), self.num_layers)
+    self.Wh = clones(nn.Linear(self.hidden_size, self.hidden_size,bias=False), self.num_layers-1)
     #insert weights for first layer
     self.Wh.insert(0, nn.Linear(self.emb_size, self.hidden_size))
     nn.init.uniform_(self.Wh[0].weight,-np.sqrt(1/self.hidden_size),np.sqrt(1/self.hidden_size))
