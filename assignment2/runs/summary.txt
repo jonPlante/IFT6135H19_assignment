@@ -1,8 +1,8 @@
 Q4.1
 
 ID		 MODEL	Optimizer			LR			Batch		Seq_len		Hidden size		layers		keep_prob		Train PPL		Valid PPL
-01		RNN		ADAM				0.0001		20			35			1500			2			0.35			Running main epoch 5
-02		GRU		SGD_LR_SCHEDULE		10			20			35			1500			2			0.35			Running jon guillaumep
+01		RNN		ADAM				0.0001		20			35			1500			2			0.35			Running main epoch 0
+02		GRU		SGD_LR_SCHEDULE		10			20			35			1500			2			0.35			Running jon guillaumep epoch 0
 03		TRANS	SGD_LR_SCHEDULE		20			128			35			512				6			0.9				Running chrome
 
 Q4.2
