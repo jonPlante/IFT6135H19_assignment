@@ -400,7 +400,7 @@ class MultiHeadedAttention(nn.Module):
     def masked_softmax(self,logit,mask):
         #masked version of softmax
         if mask is not None:
-            # mask=mask.unsqueeze(1)
+            mask=mask.unsqueeze(1)
             masked_logit=logit.masked_fill(mask==0,-10**9)
         else:
             masked_logit=logit
@@ -418,21 +418,21 @@ class MultiHeadedAttention(nn.Module):
         # Also apply dropout to the attention v_linear.
 
         # (Q W_Q_i + b_Q_i) as seen in eq. 10 in the .tex
-        Q=self.linear_W[0](query)#.view(query.size(0),query.size(1),self.n_heads,self.d_k).transpose(1,2)
+        Q=self.linear_W[0](query).view(query.size(0),query.size(1),self.n_heads,self.d_k).transpose(1,2)
 
         # (K W_K_i + b_K_i) as seen in eq. 10 in the .tex
-        K=self.linear_W[1](key)#.view(query.size(0),query.size(1),self.n_heads,self.d_k).transpose(1,2)
+        K=self.linear_W[1](key).view(query.size(0),query.size(1),self.n_heads,self.d_k).transpose(1,2)
 
 
         # (V W_V_i + b_V_i) as seen in eq. 11 in the .tex
-        V=self.linear_W[2](value)#.view(query.size(0),query.size(1),self.n_heads,self.d_k).transpose(1,2)
+        V=self.linear_W[2](value).view(query.size(0),query.size(1),self.n_heads,self.d_k).transpose(1,2)
 
 
         # H = []
-        logit=torch.matmul(Q,K.transpose(-2,-1))/np.sqrt(self.d_k)
+        logit=torch.matmul(Q,K.transpose.transpose(-2,-1))/np.sqrt(self.d_k)
         a=self.masked_softmax(logit,mask)
         a=self.dropout(a)
-        output=self.linear_W[3](torch.matmul(a,V))
+        output=self.linear_W[3](torch.matmul(a,V)).transpose(1,2).contiguous().view(query.size(0),-1,self.n_units))
 
         return output
 
