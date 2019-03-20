@@ -1,6 +1,6 @@
 Q4.1
 
-ID		 MODEL	Optimizer			LR			Batch		Seq_len		Hidden size		layers		keep_prob		Train PPL		Valid PPL
+ID		MODEL	Optimizer			LR			Batch		Seq_len		Hidden size		layers		keep_prob		Train PPL		Valid PPL
 01		RNN		ADAM				0.0001		20			35			1500			2			0.35			120				156
 02		GRU		SGD_LR_SCHEDULE		10			20			35			1500			2			0.35			65				105
 03		TRANS	SGD_LR_SCHEDULE		20			128			35			512				6			0.9				67				146
@@ -10,16 +10,23 @@ ID		MODEL	Optimizer			LR			Batch		Seq_len		Hidden size		layers		keep_prob		Train
 04		RNN		SGD					0.0001		20			35			1500			2			0.35			2966			2212
 05		RNN		SGD_LR_SCHEDULE		1			20			35			512				2			0.35			230				196
 
-06		GRU		SGD					10			20			35			1500			2			0.35			Running Guillaume
-07		GRU		ADAM				0.0001		20			35			1500			2			0.35			Running Main
+06		GRU		SGD					10			20			35			1500			2			0.35			50				123
+07		GRU		ADAM				0.0001		20			35			1500			2			0.35			59				114
 
 08		TRANS	SGD					20			128			35			512				6			0.9				27				173
 09		TRANS	ADAM				0.001		128			35			512				2			0.9				3				132
 
 Q4.3
 ID		MODEL	Optimizer			LR			Batch		Seq_len		Hidden size		layers		keep_prob		Train PPL		Valid PPL
-10		RNN		ADAM				0.0001		20			35			1500			3			0.35			Running on chrome
-11		RNN		ADAM				0.0001		20			35			1500			3			0.35			
+10		RNN		ADAM				0.0001		20			35			1500			3			0.35			133				169
+11		RNN		ADAM				0.0001		20			35			2000			2			0.35			Running chrome
 
-!python ptb-lm.py --save_dir='/content/gdrive/My Drive/' --save_best --model=RNN --optimizer=ADAM --initial_lr=0.0001 --batch_size=20 --seq_len=35 --hidden_size=1500 --num_layers=3 --dp_keep_prob=0.35
+13		GRU		SGD_LR_SCHEDULE		15			30			35			1500			2			0.3				Running guillaume
+
+
+16		TRANS	ADAM				0.001		128			35			1024			2			0.8				run main
+
+!python ptb-lm.py --save_dir='/content/gdrive/My Drive/' --save_best --model=RNN --optimizer=ADAM --initial_lr=0.0001 --batch_size=20 --seq_len=35 --hidden_size=2000 --num_layers=2 --dp_keep_prob=0.35
 !python ptb-lm.py --save_dir='/content/gdrive/My Drive/' --save_best --model=GRU --optimizer=ADAM --initial_lr=0.0001 --batch_size=20 --seq_len=35 --hidden_size=1500 --num_layers=2 --dp_keep_prob=0.35
+!python ptb-lm.py --save_dir='/content/gdrive/My Drive/' --save_best --model=GRU --optimizer=SGD_LR_SCHEDULE --initial_lr=15 --batch_size=30 --seq_len=35 --hidden_size=1500 --num_layers=2 --dp_keep_prob=0.30
+!python ptb-lm.py --save_dir='/content/gdrive/My Drive/' --save_best --model=TRANSFORMER --optimizer=ADAM --initial_lr=0.001 --batch_size=128 --seq_len=35 --hidden_size=1000 --num_layers=2 --dp_keep_prob=.8
