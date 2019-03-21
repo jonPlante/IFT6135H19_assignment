@@ -396,7 +396,7 @@ def run_epoch(model, data, is_train=False, lr=1.0):
         # LOSS COMPUTATION
         # This line currently averages across all the sequences in a mini-batch 
         # and all time-steps of the sequences.
-        # For problem 5.3, you will (instead) need to compute the average loss 
+        # For problem 5.1, you will (instead) need to compute the average loss 
         #at each time-step separately. 
         loss = loss_fn(outputs.contiguous().view(-1, model.vocab_size), tt)
         costs += loss.data.item() * model.seq_len

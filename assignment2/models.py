@@ -199,17 +199,19 @@ class RNN(nn.Module): # Implement a stacked vanilla RNN with Tanh nonlinearities
         - Sampled sequences of tokens
                     shape: (generated_seq_len, batch_size)
     """
-    samples = torch.empty(generated_seq_len, self.batch_size, self.vocab_size).to(device)
-    x = self.emb_W(inputs) #returns seq_len, batch_size, emb_size
-
-    for t in range(generated_seq_len):
-        x=self.drop(x)
+    samples = torch.empty(generated_seq_len,input.size(0)).to(device)
+    samples[0,:]=input
+    x=input
+   
+    for t in range(1,generated_seq_len):
+        x = self.emb_W(x) #returns seq_len, batch_size, emb_size
+        x=x*self.dp_keep_prob
         for l in range(self.num_layers):
-            x=nn.functional.tanh(self.linear_W[l](x)+self.rec_W[l](hidden[l,:,:]))
+            x=torch.tanh(self.linear_W[l](x)+self.rec_W[l](hidden[l,:,:]))
             hidden[l,:,:]=x
-            x=self.drop(x)
-        x=nn.functional.softmax(self.out_W(x))
-        samples[t,:,:]=x
+        x=nn.functional.softmax(self.out_W(x),dim=0)
+        x=torch.multinomial(x,1).squeeze()
+        samples[t,:]=x
     return samples
 
 
@@ -288,21 +290,24 @@ class GRU(nn.Module): # Implement a stacked GRU RNN
 
   def generate(self, input, hidden, generated_seq_len):
     # TODO ========================
-    samples = torch.empty(generated_seq_len, self.batch_size, self.vocab_size).to(device)
-    x = self.emb_W(inputs) #returns seq_len, batch_size, emb_size
+    samples = torch.empty(generated_seq_len,input.size(0)).to(device)
+    samples[0,:]=input
+    x=input
+    
 
-    for t in range(inputs.shape[0]):
-        x = self.drop(x)
+    for t in range(generated_seq_len):
+        x = self.emb_W(input) #returns seq_len, batch_size, emb_size
+        x = x*self.dp_keep_prob
         for l in range(self.num_layers):
             r=torch.sigmoid(self.Wr[l](x)+self.Ur[l](hidden[l,:,:].clone()))
             z=torch.sigmoid(self.Wf[l](x)+self.Uf[l](hidden[l,:,:].clone()))
             h=torch.tanh(self.Wh[l](x)+self.Uh[l](torch.mul(r,hidden[l,:,:].clone())))
-            x=torch.mul((1-z),hidden[l,:,:].clone())+torch.mul(z,h)
+            x=(torch.mul((1-z),hidden[l,:,:].clone())+torch.mul(z,h))
             hidden[l,:,:]=x
-        x=nn.functional.softmax(self.out_W(x))
-        samples[t,:,:]=x
+        x=nn.functional.softmax(self.out_W(x),dim=0)
+        x=torch.multinomial(x,1).squeeze()
+        samples[t,:]=x
     return samples
-
 
 # Problem 3
 ############################################################################
