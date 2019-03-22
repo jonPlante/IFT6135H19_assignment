@@ -1,0 +1,31 @@
+Q4.1
+
+ID		MODEL	Optimizer			LR			Batch		Seq_len		Hidden size		layers		keep_prob		Train PPL		Valid PPL
+01		RNN		ADAM				0.0001		20			35			1500			2			0.35			120				156
+02		GRU		SGD_LR_SCHEDULE		10			20			35			1500			2			0.35			65				105
+03		TRANS	SGD_LR_SCHEDULE		20			128			35			512				6			0.9				67				146
+
+Q4.2
+ID		MODEL	Optimizer			LR			Batch		Seq_len		Hidden size		layers		keep_prob		Train PPL		Valid PPL
+04		RNN		SGD					0.0001		20			35			1500			2			0.35			2966			2212
+05		RNN		SGD_LR_SCHEDULE		1			20			35			512				2			0.35			230				196
+
+06		GRU		SGD					10			20			35			1500			2			0.35			50				123
+07		GRU		ADAM				0.0001		20			35			1500			2			0.35			59				114
+
+08		TRANS	SGD					20			128			35			512				6			0.9				27				173
+09		TRANS	ADAM				0.001		128			35			512				2			0.9				3				132
+
+Q4.3
+ID		MODEL	Optimizer			LR			Batch		Seq_len		Hidden size		layers		keep_prob		Train PPL		Valid PPL
+10		RNN		ADAM				0.0001		20			35			1500			3			0.35			133				169
+11		RNN		ADAM				0.0005		20			35			2000			2			0.30			191				212
+12		RNN		ADAM				0.0001		20			35			1500			2			0.50			70				150
+
+13		GRU		SGD_LR_SCHEDULE		20			20			35			2000			2			0.3				80				111
+15		GRU		ADAM				0.0005		20			35			1250			2			0.25			63				119
+14		GRU		SGD_LR_SCHEDULE		10			20			35			1500			2			0.4				50				106
+
+16		TRANS	ADAM				0.001		128			35			1024			2			0.8				3				150
+17		TRANS	ADAM				0.0001		128			35			1024			2			0.8				7				128
+18		TRANS	ADAM				0.0001		128			35			1024			6			0.7				12				122
