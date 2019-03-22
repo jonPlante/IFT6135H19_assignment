@@ -163,14 +163,15 @@ class RNN(nn.Module): # Implement a stacked vanilla RNN with Tanh nonlinearities
 
     logits = torch.empty(self.seq_len, self.batch_size, self.vocab_size).to(device)
     embeddings = self.emb_W(inputs) #returns seq_len, batch_size, emb_size
-
+    self.hidden_list=[[],[]]
+    for l in range(self.num_layers):
+        self.hidden_list[l].append(hidden[l,:,:])
     for t in range(inputs.shape[0]):
         x = self.drop(embeddings[t,:,:])
         for l in range(self.num_layers):
-            x=torch.tanh(self.linear_W[l](x)+self.rec_W[l](hidden[l,:,:].clone()))
-            hidden[l,:,:]=x
+            x=torch.tanh(self.linear_W[l](x)+self.rec_W[l](self.hidden_list[l][t]))
+            self.hidden_list[l].append(x)
             x=self.drop(x)
-
         logits[t,:,:]=self.out_W(x)
     return logits.view(self.seq_len, self.batch_size, self.vocab_size), hidden
 
@@ -275,17 +276,19 @@ class GRU(nn.Module): # Implement a stacked GRU RNN
     # TODO ========================
     logits = torch.empty(self.seq_len, self.batch_size, self.vocab_size).to(device)
     embeddings = self.emb_W(inputs) #returns seq_len, batch_size, emb_size
-
+    self.hidden_list=[[],[]]
+    for l in range(self.num_layers):
+        self.hidden_list[l].append(hidden[l,:,:])
+    
     for t in range(inputs.shape[0]):
         x = self.drop(embeddings[t,:,:])
         for l in range(self.num_layers):
-            r=torch.sigmoid(self.Wr[l](x)+self.Ur[l](hidden[l,:,:].clone()))
-            z=torch.sigmoid(self.Wf[l](x)+self.Uf[l](hidden[l,:,:].clone()))
-            h=torch.tanh(self.Wh[l](x)+self.Uh[l](torch.mul(r,hidden[l,:,:].clone())))
-            x=torch.mul((1-z),hidden[l,:,:].clone())+torch.mul(z,h)
-            hidden[l,:,:]=x
+            r=torch.sigmoid(self.Wr[l](x)+self.Ur[l](self.hidden_list[l][t]))
+            z=torch.sigmoid(self.Wf[l](x)+self.Uf[l](self.hidden_list[l][t]))
+            h=torch.tanh(self.Wh[l](x)+self.Uh[l](torch.mul(r,self.hidden_list[l][t])))
+            x=torch.mul((1-z),self.hidden_list[l][t])+torch.mul(z,h)
+            self.hidden_list[l].append(x)
             x=self.drop(x)
-
         logits[t,:,:]=self.out_W(x)
     return logits.view(self.seq_len, self.batch_size, self.vocab_size), hidden
 
