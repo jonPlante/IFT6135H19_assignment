@@ -106,6 +106,7 @@ for m in range(len(model_types)):
 		hidden = nn.Parameter(torch.zeros(numLayers[m],samples,hiddenSize[m])).to(device)
 		input=torch.ones(10000)*1/1000
 		input=torch.multinomial(input,samples).to(device)
+		model.eval()
 		output=model.generate(input, hidden, seq_len[s])
 		print('Saving generated samples')
 		fid=open(model_types[m]+'_' +str(seq_len[s])+'.txt','w')
